@@ -1,101 +1,151 @@
-# Notes Manager
+# Flutter OCR Document Scanner
 
-A production-ready Flutter 3.x application called **Notes Manager** using **Provider State Management**, **Firebase Authentication**, and **Cloud Firestore** following **MVVM (Model-View-ViewModel)** architecture principles.
+A production-ready, offline-first Flutter application designed to scan documents, run OCR text recognition, auto-classify document types, parse structured data fields, and synchronize metadata (keeping images local for privacy and storage savings) to Cloud Firestore.
+
+The project follows **Clean Architecture** principles and uses **Provider State Management**, **Firebase Authentication**, **Cloud Firestore**, and **Google ML Kit Text Recognition**.
 
 ---
 
-## Features
+## Key Features
 
 ### 🔐 Authentication Module
-- **Splash Screen**: Dynamic logo animations; determines current auth session and redirects automatically.
-- **Signup View**: Includes validation for Full Name, Email, Password, and Confirmation. Automatically creates user profiles in Firebase Auth and stores details inside the Firestore `users` collection.
-- **Login View**: Validates inputs, handles authentication errors with custom SnackBar alerts, and persists user sessions.
-- **Logout Action**: Signs out from Firebase, resets local provider cache, and redirects to the Login screen.
+- **Splash Screen**: Evaluates the authentication session and redirects automatically.
+- **Login & Signup Views**: Validates inputs, handles auth errors, and registers user profiles in Firebase Authentication and Firestore `users` collection.
+- **Logout Action**: Clears local cached states and redirects to the Login screen.
 
-### 📝 Notes CRUD Module
-- **Dashboard View**: Shows user welcome greeting, real-time total notes count, search filtering, and responsive list/grid layout.
-- **Add Note View**: Elegant notepad layout with mandatory title checks.
-- **Edit Note View**: Pre-populates selected note details, processes Firestore document updates, and displays validation feedback.
-- **Delete Action**: Prompts confirmation modal, clears notes in Firestore, and updates UI automatically in real-time.
+### 📸 OCR Scanner Module
+- **Camera & Gallery Sources**: Prompts runtime permissions gracefully using `permission_handler` and picks images using `image_picker`.
+- **Image Cropping**: Refines scanning boundaries with interactive cropping grids via `image_cropper`.
+- **Image Compression**: Reduces on-device storage footprint using `flutter_image_compress`.
+- **Offline OCR**: Instantly extracts raw text from document captures offline using `google_mlkit_text_recognition`.
+
+### 🏷️ Intelligent Document Classification
+- **Scoring Engine**: Evaluates OCR text in real time using a weighted keyword and regular expression scoring engine.
+- **Classifications Supported**: Auto-detects Invoices, Receipts, PAN Cards, Aadhaar Cards, Passports, Driving Licenses, Business Cards, Resumes, Utility Bills, and Bank Statements.
+
+### 📊 Structured Data Extraction (Regex Parsers)
+- Automatically parses and populates document-specific data fields:
+  - **Invoice**: Invoice Number, Date, GSTIN, Vendor, Total, Tax, Customer
+  - **Receipt**: Store, Date, Total, Items
+  - **PAN**: Name, Father Name, DOB, PAN Number
+  - **Aadhaar**: Name, DOB, Gender, Address, Aadhaar Number
+  - **Passport**: Passport Number, Nationality, Expiry Date
+  - **Driving License**: DL Number, Expiry, DOB
+  - **Business Card**: Name, Email, Phone, Company, Website
+  - **Resume**: Name, Email, Phone, Skills, Education, Experience
+  - **Utility Bill**: Consumer Number, Bill Date, Amount, Due Date
+  - **Bank Statement**: Account Number, Closing Balance, Statement Period
+
+### 📝 Dynamic Document Editor
+- Select/override the auto-detected Document Type.
+- View and copy the raw OCR text via a collapsible expansion panel.
+- Live-edit extracted keys and values, delete keys, and add or rename custom fields dynamically without key-collision typing bugs.
+
+### 🔄 Offline-First Synchronization
+- **Disk Cache**: Saves scanned documents immediately to disk as JSON files alongside cropped JPEG images.
+- **Auto-Sync**: Listens to connection changes via `connectivity_plus`. Unsynced documents (`isSynced == false`) automatically sync metadata to Firestore once internet connectivity resumes.
+- **Privacy & Storage Optimization**: Document images remain stored **strictly local** on the device, uploading only text metadata to Cloud Firestore.
 
 ---
 
-## Project Structure (MVVM)
+## Project Structure
 
 ```text
 lib/
 ├── core/
-│   ├── constants/
-│   │   └── theme.dart          # AppTheme configuration (indigo-violet responsive palette)
 │   ├── routes/
-│   │   └── app_routes.dart     # Navigation path routing & custom page transitions
-│   ├── services/
-│   │   └── exceptions.dart     # Custom exception wrapper classes
-│   └── widgets/
-│       ├── custom_text_field.dart  # Floating input, password toggles, validation
-│       ├── loading_spinner.dart    # Custom SpinKit rings
-│       └── primary_button.dart     # Gradient button layout with loading states
+│   │   └── app_routes.dart     # Routing mapping (Splash, Auth, Dashboard, Scan, Edit)
+│   ├── theme/
+│   │   ├── app_theme.dart      # Material 3 light/dark responsive theme
+│   │   └── responsive.dart     # Responsive layout constraints helper
+│   └── services/
+│       └── exceptions.dart     # Custom exception wrapper classes
 │
 ├── features/
 │   ├── auth/
 │   │   ├── models/
-│   │   │   └── user_model.dart     # UserModel mapping
+│   │   │   └── user_model.dart # User credentials data model
 │   │   ├── services/
-│   │   │   └── auth_service.dart   # FirebaseAuth & Firestore users integration
+│   │   │   └── auth_service.dart # FirebaseAuth and profile Firestore helper
 │   │   ├── viewmodels/
-│   │   │   └── auth_viewmodel.dart # Session ChangeNotifier provider state
+│   │   │   └── auth_viewmodel.dart # Auth session state ChangeNotifier
 │   │   └── views/
-│   │       ├── login_view.dart     # Credentials verification layout
-│   │       ├── signup_view.dart    # Register user account layout
-│   │       └── splash_view.dart    # Auth transition gateway
+│   │       ├── login_view.dart
+│   │       ├── signup_view.dart
+│   │       └── splash_view.dart
 │   │
-│   └── notes/
-│       ├── models/
-│       │   └── note_model.dart     # NoteModel and Timestamp mapping
-│       ├── services/
-│       │   └── notes_service.dart   # Firestore CRUD & Realtime Query snapshots
-│       ├── viewmodels/
-│       │   └── notes_viewmodel.dart# Notes stream, count, and action bindings
-│       └── views/
-│           ├── add_note_view.dart  # Create new notes
-│           ├── dashboard_view.dart # Search query list/grid dashboard
-│           └── edit_note_view.dart # Update notes
+│   ├── documents/
+│   │   ├── data/
+│   │   │   ├── models/
+│   │   │   │   ├── document_model.dart # Scanned document schema
+│   │   │   │   └── document_type.dart  # Supported category enums
+│   │   │   ├── repository/
+│   │   │   │   └── document_repository.dart # Sync coordinator
+│   │   │   └── services/
+│   │   │       ├── local_document_service.dart # On-device JSON/JPEG caching
+│   │   │       └── firestore_service.dart      # Firestore client wrapper
+│   │   ├── provider/
+│   │   │   ├── document_provider.dart # Search, filter, and sort state
+│   │   │   └── sync_provider.dart     # Connectivity listener and background uploads
+│   │   └── screens/
+│   │       ├── dashboard_view.dart    # Searchable list dashboard
+│   │       └── edit_document_view.dart # Custom field editor
+│   │
+│   └── ocr/
+│       ├── provider/
+│       │   └── ocr_provider.dart      # Image picker, crop/compress pipeline
+│       ├── screens/
+│       │   └── ocr_capture_view.dart  # Image capture selection screen
+│       └── services/
+│           ├── ocr_service.dart       # Offline Google ML Kit OCR service
+│           ├── document_classifier.dart # Scoring engine
+│           └── parsers/
+│               ├── base_parser.dart   # Pattern matcher helpers
+│               ├── invoice_parser.dart
+│               ├── receipt_parser.dart
+│               ├── pan_parser.dart
+│               ├── aadhaar_parser.dart
+│               ├── passport_parser.dart
+│               ├── driving_license_parser.dart
+│               ├── business_card_parser.dart
+│               ├── resume_parser.dart
+│               ├── utility_bill_parser.dart
+│               └── bank_statement_parser.dart
 │
-├── firebase_options.dart       # SDK settings configuration file
-└── main.dart                   # Dependency injection configuration & app initialization
+└── main.dart                          # App initialization & provider bindings
 ```
 
 ---
 
 ## 🛠️ Firebase Setup Instructions
 
-The application is prepared for Firebase integration. To bind your own Firebase project:
+To bind the app to your Firebase project:
 
-1. **Install Firebase CLI Tools & Login**
-   Make sure Node.js is installed, then execute:
+1. **Install Firebase CLI Tools & Login**:
+   Ensure Node.js is installed, then run:
    ```bash
    npm install -g firebase-tools
    firebase login
    ```
 
-2. **Activate FlutterFire CLI**
-   Run the command below to enable global dart dependencies:
+2. **Activate FlutterFire CLI**:
+   Run:
    ```bash
    dart pub global activate flutterfire_cli
    ```
 
-3. **Configure the Project**
-   Inside the root directory (`D:\Flutter Project`), run:
+3. **Configure the Project**:
+   From the root project directory, run:
    ```bash
    flutterfire configure
    ```
-   Follow the prompts to select your target platforms (Android, iOS, Web, macOS, Windows) and select/create your Firebase project. This command automatically generates the correct configuration inside [lib/firebase_options.dart](file:///D:/Flutter%20Project/lib/firebase_options.dart) and sets up native files (e.g. `google-services.json`, `GoogleService-Info.plist`).
+   Select your Firebase project and select platforms (Android, iOS). This automatically generates `lib/firebase_options.dart`, `google-services.json`, and `GoogleService-Info.plist`.
 
-4. **Enable Firebase Products in Console**
+4. **Enable Firebase Products in Console**:
    Go to your [Firebase Console](https://console.firebase.google.com/):
-   - **Authentication**: Enable **Email/Password** sign-in method.
-   - **Firestore Database**: Create database in Test mode (or adjust rules to restrict reads/writes appropriately).
-     - *Note on Rules*: Ensure that users can only read and write their own documents matching their `userId`.
+   - **Authentication**: Enable the **Email/Password** sign-in method.
+   - **Firestore Database**: Create your database.
+     - *Deploy Rules*: Apply `firestore.rules` located in the project root to restrict user data access to document owners only.
 
 ---
 
@@ -105,11 +155,15 @@ The application is prepared for Firebase integration. To bind your own Firebase 
    ```bash
    flutter pub get
    ```
-2. Launch target devices (emulators, mobile, desktop):
+2. Verify static analysis:
    ```bash
-   flutter devices
+   flutter analyze
    ```
-3. Run the application:
+3. Run unit tests:
+   ```bash
+   flutter test
+   ```
+4. Run the application:
    ```bash
    flutter run
    ```
@@ -118,24 +172,9 @@ The application is prepared for Firebase integration. To bind your own Firebase 
 
 ## 🚀 APK Build Instructions
 
-To build a release Android application package (APK):
+To compile a release Android APK:
+```bash
+flutter build apk --release
+```
 
-1. **Verify setup compiles correctly**
-   Ensure local builds compile with no errors:
-   ```bash
-   flutter analyze
-   ```
-
-2. **Generate Release App Bundle / APK**
-   Run the Flutter build compile tool:
-   ```bash
-   flutter build apk --release
-   ```
-   For splitting app bundles by target CPU architectures (reducing downloaded sizes):
-   ```bash
-   flutter build apk --split-per-abi
-   ```
-
-3. **Output Directory**
-   Upon success, the APK files will be located at:
-   `build/app/outputs/flutter-apk/app-release.apk`
+*Note: For Windows builds, if you encounter Kotlin daemon incremental cache file-locks, compilation in-process is enabled by default via `org.gradle.jvmargs` in `android/gradle.properties`.*
