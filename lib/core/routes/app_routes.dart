@@ -2,18 +2,19 @@ import 'package:flutter/material.dart';
 import '../../features/auth/views/login_view.dart';
 import '../../features/auth/views/signup_view.dart';
 import '../../features/auth/views/splash_view.dart';
-import '../../features/notes/models/note_model.dart';
-import '../../features/notes/views/add_note_view.dart';
-import '../../features/notes/views/dashboard_view.dart';
-import '../../features/notes/views/edit_note_view.dart';
+import '../../features/documents/data/models/document_model.dart';
+import '../../features/documents/screens/dashboard_view.dart';
+import '../../features/documents/screens/edit_document_view.dart';
+import '../../features/ocr/screens/ocr_capture_view.dart';
 
 class AppRoutes {
   static const String splash = '/';
   static const String login = '/login';
   static const String signup = '/signup';
   static const String dashboard = '/dashboard';
-  static const String addNote = '/add-note';
-  static const String editNote = '/edit-note';
+  static const String addNote = '/add-note'; // Maps to OcrCaptureView
+  static const String editNote = '/edit-note'; // Maps to EditDocumentView
+  static const String editDocument = '/edit-document'; // Support editDocument alias
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
@@ -26,13 +27,14 @@ class AppRoutes {
       case dashboard:
         return _fadeRoute(const DashboardView(), settings);
       case addNote:
-        return _slideUpRoute(const AddNoteView(), settings);
+        return _slideUpRoute(const OcrCaptureView(), settings);
       case editNote:
-        final note = settings.arguments as NoteModel?;
-        if (note == null) {
-          return _errorRoute('Note parameter is missing for edit view.');
+      case editDocument:
+        final doc = settings.arguments as DocumentModel?;
+        if (doc == null) {
+          return _errorRoute('Document parameter is missing for edit view.');
         }
-        return _slideUpRoute(EditNoteView(note: note), settings);
+        return _slideUpRoute(EditDocumentView(document: doc), settings);
       default:
         return _errorRoute('No route defined for ${settings.name}');
     }

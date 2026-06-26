@@ -1,7 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:notes_manager/features/auth/models/user_model.dart';
-import 'package:notes_manager/features/notes/models/note_model.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:notes_manager/features/documents/data/models/document_model.dart';
 
 void main() {
   group('UserModel Tests', () {
@@ -23,22 +22,27 @@ void main() {
     });
   });
 
-  group('NoteModel Tests', () {
+  group('DocumentModel Tests', () {
     test('should copyWith matching attributes', () {
-      final now = Timestamp.now();
-      final note = NoteModel(
-        id: 'note_1',
+      final now = DateTime.now();
+      final doc = DocumentModel(
+        documentId: 'doc_1',
         userId: 'user_123',
-        title: 'Initial Title',
-        description: 'Initial Desc',
+        documentType: 'invoice',
+        rawText: 'mock invoice text',
+        parsedFields: {'invoiceNo': 'INV-100'},
+        imageUrl: '',
+        localImagePath: '',
         createdAt: now,
         updatedAt: now,
+        isEdited: false,
+        isSynced: false,
       );
 
-      final updated = note.copyWith(title: 'Updated Title');
-      expect(updated.id, 'note_1');
-      expect(updated.title, 'Updated Title');
-      expect(updated.description, 'Initial Desc');
+      final updated = doc.copyWith(documentType: 'receipt');
+      expect(updated.documentId, 'doc_1');
+      expect(updated.documentType, 'receipt');
+      expect(updated.rawText, 'mock invoice text');
     });
   });
 }

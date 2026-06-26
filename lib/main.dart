@@ -5,8 +5,10 @@ import 'core/routes/app_routes.dart';
 import 'core/theme/app_theme.dart';
 import 'features/auth/services/auth_service.dart';
 import 'features/auth/viewmodels/auth_viewmodel.dart';
-import 'features/notes/services/notes_service.dart';
-import 'features/notes/viewmodels/notes_viewmodel.dart';
+import 'features/documents/data/repository/document_repository.dart';
+import 'features/documents/provider/document_provider.dart';
+import 'features/documents/provider/sync_provider.dart';
+import 'features/ocr/provider/ocr_provider.dart';
 import 'firebase_options.dart';
 
 void main() async {
@@ -34,8 +36,8 @@ class NotesManagerApp extends StatelessWidget {
         Provider<AuthService>(
           create: (_) => AuthService(),
         ),
-        Provider<NotesService>(
-          create: (_) => NotesService(),
+        Provider<DocumentRepository>(
+          create: (_) => DocumentRepository(),
         ),
         ChangeNotifierProvider(
           create: (context) =>
@@ -43,11 +45,19 @@ class NotesManagerApp extends StatelessWidget {
         ),
         ChangeNotifierProvider(
           create: (context) =>
-              NotesViewModel(context.read<NotesService>()),
+              DocumentProvider(context.read<DocumentRepository>()),
+        ),
+        ChangeNotifierProvider(
+          create: (context) =>
+              OcrProvider(context.read<DocumentRepository>()),
+        ),
+        ChangeNotifierProvider(
+          create: (context) =>
+              SyncProvider(context.read<DocumentRepository>()),
         ),
       ],
       child: MaterialApp(
-        title: 'Notes Manager',
+        title: 'OCR Document Scanner',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
         darkTheme: AppTheme.darkTheme,

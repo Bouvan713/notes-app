@@ -48,7 +48,7 @@ class AuthService {
       }
       return profile;
     } on FirebaseAuthException catch (e) {
-      throw AuthException(_mapAuthErrorCode(e.code, e.message), e.code);
+      throw AuthException(  _mapAuthErrorCode(e.code, e.message), e.code);
     } on AuthException {
       rethrow;
     } catch (e) {
